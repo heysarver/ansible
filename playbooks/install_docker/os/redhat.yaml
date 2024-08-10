@@ -1,0 +1,25 @@
+# redhat.yaml
+---
+- name: Ensure dependencies are present
+  yum:
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: present
+
+- name: Add Docker repository
+  command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+
+- name: Install Docker CE
+  yum:
+    name: docker-ce
+    state: latest
+
+- name: Ensure Docker is started and enabled on boot
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
