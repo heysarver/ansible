@@ -1,0 +1,49 @@
+---
+- name: Setup file manager with X11 forwarding
+  hosts: "{{ target_host }}"
+  become: true
+  vars:
+    sshd_config_dir: "/etc/ssh/sshd_config.d"
+
+  tasks:
+    - name: Ensure the required packages for X11 forwarding are installed
+      package:
+        name:
+          - xauth
+          - xorg-x11-xauth
+          - xorg-x11-utils
+          - xorg-x11-fonts-*
+          - xorg-x11-xinit
+          - nautilus  # file manager
+        state: present
+
+    - name: Create sshd_config.d directory if it doesn't exist
+      file:
+        path: "{{ sshd_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Configure X11 forwarding in SSH
+      blockinfile:
+        path: "{{ sshd_config_dir }}/99-x11-forwarding.conf"
+        create: yes
+        mode: '0644'
+        block: |
+          # Configuration for X11 forwarding
+          X11Forwarding yes
+          X11DisplayOffset 10
+          X11UseLocalhost yes
+      notify: Restart SSH
+
+    - name: Ensure /etc/ssh/sshd_config includes sshd_config.d directory
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "Include /etc/ssh/sshd_config.d/*.conf"
+        state: present
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted
